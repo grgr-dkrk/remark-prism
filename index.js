@@ -164,6 +164,10 @@ const parseLang = (str) => {
   const attrs = selectors.length ? selectorToAttrs(selectors) : {};
   const className = classNames(lang ? `language-${lang}` : '', attrs.class);
   const { legend = '', ...restAttrs } = attrs;
+  const title =
+    str.indexOf('title=') === -1
+      ? null
+      : str.replace(/(.+:title=)(.[^[{|(|&]+).*$/, '$2');
 
   return {
     lang,
@@ -173,6 +177,7 @@ const parseLang = (str) => {
       ...restAttrs,
       class: className,
     },
+    title,
   };
 };
 
@@ -192,7 +197,7 @@ module.exports = (options = {}) => (tree) => {
     }
 
     const { value } = node;
-    const { lang, attrs, legend, range } = parseLang(node.lang);
+    const { lang, attrs, legend, range, title } = parseLang(node.lang);
 
     const raw = highlight({ lang, value, attrs })
       .split(/\n/)
@@ -202,11 +207,23 @@ module.exports = (options = {}) => (tree) => {
         );
       }, '');
 
-    const code = h('code', {}, u('raw', raw));
+    const uniqueId = `code-${node.position.start.line}-${node.position.start.offset}`;
+
+    const code = h('code', { id: uniqueId }, u('raw', raw));
     const pre = h(
       'div',
       { className: 'remark-highlight' },
       [
+        title
+          ? h(
+              'p',
+              {
+                className: 'remark-highlight-title',
+                ariaDescribedBy: uniqueId,
+              },
+              title,
+            )
+          : null,
         h('pre', attrs, [code]),
         legend ? h('legend', {}, [legend]) : null,
       ].filter(Boolean),
